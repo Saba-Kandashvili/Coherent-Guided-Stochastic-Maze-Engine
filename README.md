@@ -76,6 +76,30 @@ The returned `uint16_t` is a bitmask. See `tiles.h` for specific flag definition
 *   `0`: Empty/Void (No tile).
 *   `>0`: Valid tile. Check bits to determine wall/door orientation.
 
+### Data Dictionary
+
+The grid contains `uint16_t` values. `0` represents **Void** (Empty Space). Any other number corresponds to a specific tile shape defined in `tiles.h`.
+
+| Value | Name | Shape / Connectivity |
+| :--- | :--- | :--- |
+| **0** | `Empty_Tile` | Void / Hole |
+| **1** | `North_East` | ╚ Corner (Connects N+E) |
+| **2** | `South_East` | ╔ Corner (Connects S+E) |
+| **4** | `South_West` | ╗ Corner (Connects S+W) |
+| **8** | `North_West` | ╝ Corner (Connects N+W) |
+| **16** | `North_South` | ║ Straight (Vertical) |
+| **32** | `West_East` | ═ Straight (Horizontal) |
+| **64** | `North_T` | ╩ T-Junction (Points N) |
+| **128** | `East_T` | ╠ T-Junction (Points E) |
+| **256** | `South_T` | ╦ T-Junction (Points S) |
+| **512** | `West_T` | ╣ T-Junction (Points W) |
+| **1024** | `Normal_X` | ╬ 4-Way Intersection |
+| **2048** | `Special_X` | ╬ Vertical Connector (Stairs Up) |
+| **4096** | `North_D` | ╨ Dead End (Open N) |
+| **8192** | `East_D` | ╞ Dead End (Open E) |
+| **16384** | `South_D` | ╥ Dead End (Open S) |
+| **32768** | `West_D` | ╡ Dead End (Open W) |
+
 ## Build
 
 Built using CMake. This will generate the shared library file.
@@ -88,7 +112,6 @@ cmake --build .
 ```
 
 ## Performance
-Benchmarks on Ryzen 7 5800H:
 *   **25x25x5 (Runtime Chunk):** ~1.07ms
 *   **200x200x5 (Full Map, 70% Density):** ~16.08ms
 
