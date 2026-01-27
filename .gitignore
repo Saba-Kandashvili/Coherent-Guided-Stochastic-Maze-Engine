@@ -1,0 +1,6 @@
+build/
+build~/
+CMakeCache.txt
+CMakeFiles/
+*.user
+cgsme_debug.log
