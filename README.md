@@ -71,6 +71,76 @@ if (map) {
 }
 ```
 
+### Quick Hello World (Bindings)
+
+Since CGSME exports standard C ABI symbols, binding it to high-level languages is trivial. Note that you must handle the 3D pointer dereferencing (`uint16 ***`) specific to your language's marshalling rules.
+
+#### C# (Unity)
+```csharp
+using System;
+using System.Runtime.InteropServices;
+
+public class MazeGen
+{
+    [DllImport("libCGSME")] // Ensure libCGSME.dll / libCGSME.so is in Plugins
+    private static extern IntPtr generateGrid(uint width, uint length, uint height, uint seed, uint fullness);
+
+    [DllImport("libCGSME")]
+    private static extern void freeGrid(IntPtr grid, uint width, uint length, uint height);
+
+    public void Create()
+    {
+        uint w = 50, l = 50, h = 3;
+        IntPtr gridPtr = generateGrid(w, l, h, 12345, 70);
+        
+        if (gridPtr != IntPtr.Zero)
+        {
+            // ... Logic to unmarshall IntPtr to ushort[,,] ...
+            freeGrid(gridPtr, w, l, h);
+        }
+    }
+}
+```
+
+#### Python (ctypes)
+```python
+import ctypes
+from ctypes import c_uint32, c_uint16, POINTER
+
+# Load Library
+lib = ctypes.CDLL("./libCGSME.dll") # Linux: ./libCGSME.so
+
+# Define Return Type: uint16_t***
+ThreeDArray = POINTER(POINTER(POINTER(c_uint16)))
+lib.generateGrid.restype = ThreeDArray
+lib.generateGrid.argtypes = [c_uint32] * 5
+lib.freeGrid.argtypes = [ThreeDArray, c_uint32, c_uint32, c_uint32]
+
+# Usage
+w, l, h = 50, 50, 3
+grid = lib.generateGrid(w, l, h, 12345, 70)
+
+# Access directly (slow, but works)
+print(f"Tile at [0][10][10]: {grid[0][10][10]}")
+
+lib.freeGrid(grid, w, l, h)
+```
+
+#### Java (JNA)
+```java
+public interface CGSME extends Library {
+    CGSME INSTANCE = Native.load("libCGSME", CGSME.class);
+
+    // Returns a Pointer (requires manual offset calculation to read data)
+    Pointer generateGrid(int width, int length, int height, int seed, int fullness);
+    void freeGrid(Pointer grid, int width, int length, int height);
+}
+
+// Usage
+Pointer p = CGSME.INSTANCE.generateGrid(50, 50, 3, 12345, 70);
+CGSME.INSTANCE.freeGrid(p, 50, 50, 3);
+```
+
 ### Data Interpretation
 The returned `uint16_t` is a bitmask. See `tiles.h` for specific flag definitions (e.g., `North_Open`, `East_Open`). 
 *   `0`: Empty/Void (No tile).
