@@ -2,7 +2,7 @@
 
 Native C backend for **Escape from Ganivi**. Handles procedural map generation, topology analysis, and liminal space synthesis.
 
-Built for speed (sub-2ms for runtime chunks), strict connectivity enforcement, and precise density control.
+Built for speed and precise control.
 
 ## Pipeline
 
