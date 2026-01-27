@@ -1,10 +1,8 @@
-***
-
 # CGSME (Coherent Guided Stochastic Maze Engine)
 
 Native C backend for **Escape from Ganivi**. Handles procedural map generation, topology analysis, and liminal space synthesis.
 
-Built for speed (sub-2ms for runtime chunks) and presice control.
+Built for speed (sub-2ms for runtime chunks), strict connectivity enforcement, and precise density control.
 
 ## Pipeline
 
@@ -35,13 +33,52 @@ Custom bitmask-based WFC implementation optimized with a Min-Heap.
 
 ### 5. Post-Processing (The German Welder)
 Once the maze is filled, the engine runs a Kruskal’s Algorithm pass.
-*   Identifies disjoint regions (e.g., a room that generated with no doors).
+*   Identifies disjoint regions.
 *   Punches holes between them to guarantee 100% traversability.
 *   *Why German?* Because it is precise and efficient.
 
+## Integration & Usage
+
+CGSME is designed to be compiled as a shared library (`.dll` or `.so`) and called from a host application (Unity, Unreal, Godot, or custom C++ engines).
+
+### C API
+The engine exposes a direct entry point for generation and a cleanup function to manage memory.
+
+```c
+#include "generator.h"
+
+// 1. Configuration
+uint32_t width = 50;
+uint32_t length = 50;
+uint32_t height = 3;
+uint32_t seed = 12345;
+uint32_t fullness = 70; // 70% density
+
+// 2. Generate
+// Returns a 3D array: grid[z][y][x]
+// Each uint16_t is a bitmask representing tile connectivity.
+uint16_t ***map = generateGrid(width, length, height, seed, fullness);
+
+if (map) {
+    // Access data (Layer 0, Row 10, Col 10)
+    uint16_t tileMask = map[0][10][10];
+    
+    // ... Process/Render the map ...
+
+    // 3. Cleanup
+    // MANDATORY: The grid uses malloc internally. You must free it.
+    freeGrid(map, width, length, height);
+}
+```
+
+### Data Interpretation
+The returned `uint16_t` is a bitmask. See `tiles.h` for specific flag definitions (e.g., `North_Open`, `East_Open`). 
+*   `0`: Empty/Void (No tile).
+*   `>0`: Valid tile. Check bits to determine wall/door orientation.
+
 ## Build
 
-Built using CMake. 
+Built using CMake. This will generate the shared library file.
 
 ```bash
 mkdir build
@@ -50,12 +87,15 @@ cmake ..
 cmake --build .
 ```
 
-Outputs a shared library (`.dll` / `.so`) for hot-loading into Unity.
-
 ## Performance
+Benchmarks on Ryzen 7 5800H:
 *   **25x25x5 (Runtime Chunk):** ~1.07ms
 *   **200x200x5 (Full Map, 70% Density):** ~16.08ms
 
 ## Dependencies
 *   `tinycthread` (included) for multithreading.
 *   Standard C11 libraries.
+
+## Project Context
+
+This engine was developed as the backend for a university project (*Escape from Ganivi*). It was built to explore the technical limits of procedural generation, specifically focusing on combining geometric noise generation with topological graph theory to solve the "isolated island" problem inherent in standard Wave Function Collapse algorithms.
