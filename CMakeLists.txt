@@ -26,7 +26,10 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 # 4. MODIFY the target to link necessary system libraries (for Linux).
-if(UNIX)
+# On Android the sysroot provides pthread functionality via Bionic and
+# linking explicitly to -lpthread can fail (NDK's linker can't find -lpthread).
+# Avoid linking pthread when building for Android.
+if(UNIX AND NOT ANDROID)
     target_link_libraries(${PROJECT_NAME} PRIVATE pthread)
 endif()
 
