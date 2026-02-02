@@ -172,7 +172,8 @@ void findConnectedRegionsInPlace(uint16_t **grid, uint32_t width, uint32_t lengt
 			}
 			else
 			{
-				grid[i][j] = (uint16_t)maskToIndex(grid[i][j]);
+				// grid[i][j] = (uint16_t)maskToIndex(grid[i][j]);
+				grid[i][j] = __builtin_ctz(grid[i][j]);
 			}
 		}
 	}

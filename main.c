@@ -60,8 +60,8 @@ int main(int argc, char **argv)
     }
 
     // 2. Configuration
-    uint32_t width = 5;
-    uint32_t length = 5;
+    uint32_t width = 100;
+    uint32_t length = 100;
     uint32_t height = 3;
     // uint32_t seed = time(NULL);
     uint32_t seed = 5;
