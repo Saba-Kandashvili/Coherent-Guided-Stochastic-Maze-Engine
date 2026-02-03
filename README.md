@@ -4,6 +4,9 @@ Native C backend for **Escape from Ganivi**. Handles procedural map generation, 
 
 Built for speed and precise control.
 
+<img width="865" height="869" alt="Screenshot 2026-02-03 115903" src="https://github.com/user-attachments/assets/4afc1c6d-6a2a-42e6-9b9c-78cec44f6575" />
+
+
 ## Pipeline
 
 Standard WFC fills a square grid until it crashes. CGSME implements a **"Mask-First"** architecture to sculpt organic layouts with exact density control.
