@@ -431,16 +431,36 @@ uint16_t ***generateGrid(uint32_t width, uint32_t length, uint32_t height, uint3
     uint64_t __cgsme_grid_start_cycles = cgsme_now_cycles();
 #endif
 
+    // uint16_t ***grid = malloc(sizeof(uint16_t **) * height);
+
+    // for (int32_t i = 0; i < height; i++)
+    // {
+    //     // USE CALLOC
+    //     // ensures the grid is 00000000.
+    //     // can check "if grid[i][j] == 0" later
+    //     grid[i] = calloc(length, sizeof(uint16_t *));
+    //     for (int j = 0; j < length; j++)
+    //         grid[i][j] = calloc(width, sizeof(uint16_t));
+    // }
+
+    // top level pointer
     uint16_t ***grid = malloc(sizeof(uint16_t **) * height);
 
-    for (int32_t i = 0; i < height; i++)
+    // mid level pointer
+    uint16_t **all_rows = malloc(height * length * sizeof(uint16_t *));
+
+    // actual data all at once (all 0s)
+    uint16_t *all_data = calloc(height * length * width, sizeof(uint16_t));
+
+    // stich so it can be indexed as grid[layer][row][col]
+    for (uint32_t i = 0; i < height; i++)
     {
-        // USE CALLOC
-        // ensures the grid is 00000000.
-        // can check "if grid[i][j] == 0" later
-        grid[i] = calloc(length, sizeof(uint16_t *));
-        for (int j = 0; j < length; j++)
-            grid[i][j] = calloc(width, sizeof(uint16_t));
+        grid[i] = &all_rows[i*length]; // point to the start of this layer
+        for (uint32_t j = 0; j < length; j++)
+        {
+            // point to the start of this row
+            grid[i][j] = &all_data[(i*length + j)*width];
+        }
     }
 
     srand(seed);
@@ -497,15 +517,18 @@ uint16_t ***generateGrid(uint32_t width, uint32_t length, uint32_t height, uint3
 void freeGrid(uint16_t ***grid, uint32_t width, uint32_t length, uint32_t height)
 {
     CGSME_PROFILE_FUNC();
-    for (int32_t i = 0; i < height; i++)
+    if (grid != NULL)
     {
-        for (int32_t j = 0; j < length; j++)
+        // grid[0] contains the pointer to all_rows
+        if (grid[0] != NULL)
         {
-            free((void *)grid[i][j]);
+            // grid[0][0] contains the pointer to all_data
+            free((void *)grid[0][0]); 
         }
-        free((void *)grid[i]);
+        
+        free((void *)grid[0]); // free all_rows
+        free((void *)grid);    // free the top level grid pointer
     }
-    free((void *)grid);
 }
 
 void cleanGrid(uint16_t **gridLayer, uint32_t width, uint32_t length, uint32_t x, uint32_t y)
