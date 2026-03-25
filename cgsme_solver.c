@@ -123,7 +123,7 @@ void collapseTile(uint16_t *tile, float *rates, uint32_t *rng)
 	// 2. Pick a random value within the total weight range
 	// threadRandom returns uint32. Divide by max to get 0.0-1.0 float.
 	// 4294967296.0 is 2^32.
-	float random_01 = (float)nextRandom(rng) / 4294967296.0f;
+	float random_01 = (float)nextRandom(rng) * (1.0f / 4294967296.0f);
 	float random_val = random_01 * total_weight;
 
 	// 3. find the winner
@@ -173,214 +173,172 @@ void collapseTile(uint16_t *tile, float *rates, uint32_t *rng)
 	}
 }
 
-void updateNeighbours(uint16_t **gridLayer, uint32_t width, uint32_t length, uint32_t x, uint32_t y, MinHeap *heap, float **distMap, uint32_t *rng)
+typedef struct {
+    uint16_t n, e, s, w;
+} TileMasks;
+
+// precompute once globally 
+// index matches the bit number
+static const TileMasks MASK_LUT[16] = {
+    // 0: North_East_Corridor
+    {North_Open_Mask, East_Open_Mask, South_Closed_Mask, West_Closed_Mask},
+    // 1: South_East_Corridor
+    {North_Closed_Mask, East_Open_Mask, South_Open_Mask, West_Closed_Mask},
+    // 2: South_West_Corridor
+    {North_Closed_Mask, East_Closed_Mask, South_Open_Mask, West_Open_Mask},
+    // 3: North_West_Corridor
+    {North_Open_Mask, East_Closed_Mask, South_Closed_Mask, West_Open_Mask},
+    // 4: North_South_Corridor
+    {North_Open_Mask, East_Closed_Mask, South_Open_Mask, West_Closed_Mask},
+    // 5: West_East_Corridor
+    {North_Closed_Mask, East_Open_Mask, South_Closed_Mask, West_Open_Mask},
+    // 6: North_T_Corridor
+    {North_Open_Mask, East_Open_Mask, South_Closed_Mask, West_Open_Mask},
+    // 7: East_T_Corridor
+    {North_Open_Mask, East_Open_Mask, South_Open_Mask, West_Closed_Mask},
+    // 8: South_T_Corridor
+    {North_Closed_Mask, East_Open_Mask, South_Open_Mask, West_Open_Mask},
+    // 9: West_T_Corridor
+    {North_Open_Mask, East_Closed_Mask, South_Open_Mask, West_Open_Mask},
+    // 10: Normal_X_Corridor
+    {North_Open_Mask, East_Open_Mask, South_Open_Mask, West_Open_Mask},
+    // 11: Special_X_Corridor
+    {North_Open_Mask, East_Open_Mask, South_Open_Mask, West_Open_Mask},
+    // 12: North_DeadEnd
+    {North_Open_Mask, East_Closed_Mask, South_Closed_Mask, West_Closed_Mask},
+    // 13: East_DeadEnd
+    {North_Closed_Mask, East_Open_Mask, South_Closed_Mask, West_Closed_Mask},
+    // 14: South_DeadEnd
+    {North_Closed_Mask, East_Closed_Mask, South_Open_Mask, West_Closed_Mask},
+    // 15: West_DeadEnd
+    {North_Closed_Mask, East_Closed_Mask, South_Closed_Mask, West_Open_Mask}
+};
+
+void updateNeighbours(uint16_t **gridLayer, uint32_t width, uint32_t length, uint32_t x, uint32_t y, MinHeap *heap, uint32_t *rng)
 {
 #ifdef cgsme_DEBUG
-	uint64_t __cgsme_neigh_start = cgsme_now_us();
-	uint64_t __cgsme_neigh_start_cycles = cgsme_now_cycles();
+    uint64_t __cgsme_neigh_start = cgsme_now_us();
+    uint64_t __cgsme_neigh_start_cycles = cgsme_now_cycles();
 #endif
 
-	uint16_t northMask, eastMask, southMask, westMask;
+    uint16_t northMask, eastMask, southMask, westMask;
+    uint16_t tile = gridLayer[y][x];
 
-	switch (gridLayer[y][x])
-	{
-	case Empty_Tile:
-		northMask = North_Closed_Mask;
-		eastMask = East_Closed_Mask;
-		southMask = South_Closed_Mask;
-		westMask = West_Closed_Mask;
-		break;
-	case Normal_X_Corridor:
-	case Special_X_Corridor:
-		northMask = North_Open_Mask;
-		eastMask = East_Open_Mask;
-		southMask = South_Open_Mask;
-		westMask = West_Open_Mask;
-		break;
-	case North_East_Corridor:
-		northMask = North_Open_Mask;
-		eastMask = East_Open_Mask;
-		southMask = South_Closed_Mask;
-		westMask = West_Closed_Mask;
-		break;
-	case South_East_Corridor:
-		northMask = North_Closed_Mask;
-		eastMask = East_Open_Mask;
-		southMask = South_Open_Mask;
-		westMask = West_Closed_Mask;
-		break;
-	case South_West_Corridor:
-		northMask = North_Closed_Mask;
-		eastMask = East_Closed_Mask;
-		southMask = South_Open_Mask;
-		westMask = West_Open_Mask;
-		break;
-	case North_West_Corridor:
-		northMask = North_Open_Mask;
-		eastMask = East_Closed_Mask;
-		southMask = South_Closed_Mask;
-		westMask = West_Open_Mask;
-		break;
-	case North_South_Corridor:
-		northMask = North_Open_Mask;
-		eastMask = East_Closed_Mask;
-		southMask = South_Open_Mask;
-		westMask = West_Closed_Mask;
-		break;
-	case West_East_Corridor:
-		northMask = North_Closed_Mask;
-		eastMask = East_Open_Mask;
-		southMask = South_Closed_Mask;
-		westMask = West_Open_Mask;
-		break;
-	case North_T_Corridor:
-		northMask = North_Open_Mask;
-		eastMask = East_Open_Mask;
-		southMask = South_Closed_Mask;
-		westMask = West_Open_Mask;
-		break;
-	case East_T_Corridor:
-		northMask = North_Open_Mask;
-		eastMask = East_Open_Mask;
-		southMask = South_Open_Mask;
-		westMask = West_Closed_Mask;
-		break;
-	case South_T_Corridor:
-		northMask = North_Closed_Mask;
-		eastMask = East_Open_Mask;
-		southMask = South_Open_Mask;
-		westMask = West_Open_Mask;
-		break;
-	case West_T_Corridor:
-		northMask = North_Open_Mask;
-		eastMask = East_Closed_Mask;
-		southMask = South_Open_Mask;
-		westMask = West_Open_Mask;
-		break;
-	case North_DeadEnd:
-		northMask = North_Open_Mask;
-		eastMask = East_Closed_Mask;
-		southMask = South_Closed_Mask;
-		westMask = West_Closed_Mask;
-		break;
-	case East_DeadEnd:
-		northMask = North_Closed_Mask;
-		eastMask = East_Open_Mask;
-		southMask = South_Closed_Mask;
-		westMask = West_Closed_Mask;
-		break;
-	case South_DeadEnd:
-		northMask = North_Closed_Mask;
-		eastMask = East_Closed_Mask;
-		southMask = South_Open_Mask;
-		westMask = West_Closed_Mask;
-		break;
-	case West_DeadEnd:
-		northMask = North_Closed_Mask;
-		eastMask = East_Closed_Mask;
-		southMask = South_Closed_Mask;
-		westMask = West_Open_Mask;
-		break;
-	default:
-		northMask = (uint16_t)-1;
-		eastMask = (uint16_t)-1;
-		southMask = (uint16_t)-1;
-		westMask = (uint16_t)-1;
-		break;
-	}
+    if (tile == Empty_Tile)
+    {
+        northMask = North_Closed_Mask;
+        eastMask  = East_Closed_Mask;
+        southMask = South_Closed_Mask;
+        westMask  = West_Closed_Mask;
+    }
+    
+    else if ((tile & (tile - 1)) == 0) 
+    {
+        uint32_t idx = __builtin_ctz(tile);
+        northMask = MASK_LUT[idx].n;
+        eastMask  = MASK_LUT[idx].e;
+        southMask = MASK_LUT[idx].s;
+        westMask  = MASK_LUT[idx].w;
+    }
+    else
+    {
+        northMask = (uint16_t)-1;
+        eastMask  = (uint16_t)-1;
+        southMask = (uint16_t)-1;
+        westMask  = (uint16_t)-1;
+    }
 
-	// apply masks & check changes
-	// ONLY access Heap if heap != NULL (allows to use this function in cleanup phases too)
+    // apply masks and check changes
+    // ONLY access heap if heap != NULL (allows to use this function in cleanup phases too)
 
-	// WEST (x-1)
-	if ((int32_t)x - 1 >= 0 && __builtin_popcount(gridLayer[y][x - 1]) > 1)
-	{
-		uint16_t oldVal = gridLayer[y][x - 1];
-		gridLayer[y][x - 1] &= westMask;
+    // WEST (x-1)
+    if ((int32_t)x - 1 >= 0 && __builtin_popcount(gridLayer[y][x - 1]) > 1)
+    {
+        uint16_t oldVal = gridLayer[y][x - 1];
+        gridLayer[y][x - 1] &= westMask;
 
-		// REVIVAL CHECK: If it became 0, it was a contradiction. Reset it.
-		if (gridLayer[y][x - 1] == 0)
-			gridLayer[y][x - 1] = All_Possible_State;
+        // REVIVAL CHECK if it became 0 it was a contradiction. reset
+        if (gridLayer[y][x - 1] == 0)
+            gridLayer[y][x - 1] = All_Possible_State;
 
-		if (heap && gridLayer[y][x - 1] != oldVal)
-		{
-			heapInsertOrUpdate(heap, gridLayer, x - 1, y, distMap, rng);
-		}
-	}
+        if (heap && gridLayer[y][x - 1] != oldVal)
+        {
+            heapInsertOrUpdate(heap, gridLayer, x - 1, y, rng);
+        }
+    }
 
-	// EAST (x+1)
-	if ((int32_t)x + 1 < width && __builtin_popcount(gridLayer[y][x + 1]) > 1)
-	{
-		uint16_t oldVal = gridLayer[y][x + 1];
-		gridLayer[y][x + 1] &= eastMask;
+    // EAST (x+1)
+    if ((int32_t)x + 1 < width && __builtin_popcount(gridLayer[y][x + 1]) > 1)
+    {
+        uint16_t oldVal = gridLayer[y][x + 1];
+        gridLayer[y][x + 1] &= eastMask;
 
-		if (gridLayer[y][x + 1] == 0)
-			gridLayer[y][x + 1] = All_Possible_State;
+        if (gridLayer[y][x + 1] == 0)
+            gridLayer[y][x + 1] = All_Possible_State;
 
-		if (heap && gridLayer[y][x + 1] != oldVal)
-		{
-			heapInsertOrUpdate(heap, gridLayer, x + 1, y, distMap, rng);
-		}
-	}
+        if (heap && gridLayer[y][x + 1] != oldVal)
+        {
+            heapInsertOrUpdate(heap, gridLayer, x + 1, y, rng);
+        }
+    }
 
-	// NORTH (y-1)
-	if ((int32_t)y - 1 >= 0 && __builtin_popcount(gridLayer[y - 1][x]) > 1)
-	{
-		uint16_t oldVal = gridLayer[y - 1][x];
-		gridLayer[y - 1][x] &= northMask;
+    // NORTH (y-1)
+    if ((int32_t)y - 1 >= 0 && __builtin_popcount(gridLayer[y - 1][x]) > 1)
+    {
+        uint16_t oldVal = gridLayer[y - 1][x];
+        gridLayer[y - 1][x] &= northMask;
 
-		if (gridLayer[y - 1][x] == 0)
-			gridLayer[y - 1][x] = All_Possible_State;
+        if (gridLayer[y - 1][x] == 0)
+            gridLayer[y - 1][x] = All_Possible_State;
 
-		if (heap && gridLayer[y - 1][x] != oldVal)
-		{
-			heapInsertOrUpdate(heap, gridLayer, x, y - 1, distMap, rng);
-		}
-	}
+        if (heap && gridLayer[y - 1][x] != oldVal)
+        {
+            heapInsertOrUpdate(heap, gridLayer, x, y - 1, rng);
+        }
+    }
 
-	// SOUTH (y+1)
-	if ((int32_t)y + 1 < length && __builtin_popcount(gridLayer[y + 1][x]) > 1)
-	{
-		uint16_t oldVal = gridLayer[y + 1][x];
-		gridLayer[y + 1][x] &= southMask;
+    // SOUTH (y+1)
+    if ((int32_t)y + 1 < length && __builtin_popcount(gridLayer[y + 1][x]) > 1)
+    {
+        uint16_t oldVal = gridLayer[y + 1][x];
+        gridLayer[y + 1][x] &= southMask;
 
-		if (gridLayer[y + 1][x] == 0)
-			gridLayer[y + 1][x] = All_Possible_State;
+        if (gridLayer[y + 1][x] == 0)
+            gridLayer[y + 1][x] = All_Possible_State;
 
-		if (heap && gridLayer[y + 1][x] != oldVal)
-		{
-			heapInsertOrUpdate(heap, gridLayer, x, y + 1, distMap, rng);
-		}
-	}
+        if (heap && gridLayer[y + 1][x] != oldVal)
+        {
+            heapInsertOrUpdate(heap, gridLayer, x, y + 1, rng);
+        }
+    }
 
 #ifdef cgsme_DEBUG
-	if (cgsme_get_enabled())
-	{
-		uint64_t __cgsme_neigh_end = cgsme_now_us();
-		uint64_t __cgsme_neigh_end_cycles = cgsme_now_cycles();
-		cgsme_profile_record("updateNeighbours", (unsigned long long)(__cgsme_neigh_end - __cgsme_neigh_start),
-							 (unsigned long long)(__cgsme_neigh_end_cycles - __cgsme_neigh_start_cycles));
-	}
+    if (cgsme_get_enabled())
+    {
+        uint64_t __cgsme_neigh_end = cgsme_now_us();
+        uint64_t __cgsme_neigh_end_cycles = cgsme_now_cycles();
+        cgsme_profile_record("updateNeighbours", (unsigned long long)(__cgsme_neigh_end - __cgsme_neigh_start),
+                             (unsigned long long)(__cgsme_neigh_end_cycles - __cgsme_neigh_start_cycles));
+    }
 #endif
 }
-
-// The scoring logic extracted to a helper
-float calculateScore(uint16_t **grid, uint32_t x, uint32_t y, float **distMap, uint32_t *rng)
+// scoring logic helper
+float calculateScore(uint16_t **grid, uint32_t x, uint32_t y, uint32_t *rng)
 {
 	CGSME_PROFILE_FUNC();
 	uint32_t bitNum = __builtin_popcount(grid[y][x]);
-	(void)distMap; // Distance bias removed - mask defines shape now
 
-	// Entropy only - lower entropy = higher priority
+	// entropy only
+	// lower entropy = higher priority
 	float score = (float)bitNum;
 
-	// Tiny random noise to break ties
+	// tiny random noise to break ties
 	float noise = ((float)nextRandom(rng) / 4294967296.0f) * 0.01f;
 	return score + noise;
 }
 
-// Finds the best spot to start a new island (Closest to center that is still unvisited)
-bool findBestSeedLocation(uint16_t **grid, uint32_t width, uint32_t length, float **distMap, uint32_t *outX, uint32_t *outY, uint32_t *rng)
+// finds the best spot to start a new island (closest to center that is still unvisited)
+bool findBestSeedLocation(uint16_t **grid, uint32_t width, uint32_t length, uint32_t *outX, uint32_t *outY, uint32_t *rng)
 {
 	CGSME_PROFILE_FUNC();
 	float minScore = 1e9;
@@ -392,40 +350,40 @@ bool findBestSeedLocation(uint16_t **grid, uint32_t width, uint32_t length, floa
 		{
 			uint16_t tile = grid[i][j];
 
-			// Skip Empty (void) tiles
+			// skip Empty (void) tiles
 			if (tile == Empty_Tile)
 				continue;
 
 			int popcount = __builtin_popcount(tile);
 
-			// Skip already-collapsed tiles
+			// skip already-collapsed tiles
 			if (popcount == 1)
 				continue;
 
-			// CRITICAL FIX: If popcount is 0, this tile hit a contradiction.
-			// Reset it AND immediately apply neighbor constraints.
+			// if popcount is 0, this tile hit a contradictio
+			// reset it AND immediately apply neighbor constraints
 			if (popcount == 0)
 			{
 				grid[i][j] = All_Possible_State;
 
-				// Apply constraints from all collapsed neighbors
-				// Use the same logic as updateNeighbours but in reverse
+				// apply constraints from all collapsed neighbors
+				// use the same logic as updateNeighbours but in reverse
 
-				// Check North neighbor (y-1, which is i-1)
-				// If neighbor is collapsed, what mask should it have applied to us?
+				// check north neighbor (y-1, which is i-1)
+				// if neighbor is collapsed, what mask should it have applied
 				if (i > 0)
 				{
 					uint16_t neighbor = grid[i - 1][j];
 					if (neighbor == Empty_Tile)
 					{
-						// Void neighbor = we must close that direction
+						// void neighbor = must close that direction
 						grid[i][j] &= North_Closed_Mask;
 					}
 					else if (__builtin_popcount(neighbor) == 1)
 					{
-						// Get what mask this neighbor would apply to its South (us)
-						// If neighbor opens South -> we need North_Open_Mask
-						// If neighbor closes South -> we need North_Closed_Mask
+						// get what mask this neighbor would apply to its South (us)
+						// if neighbor opens South -> need North_Open_Mask
+						// if neighbor closes South -> need North_Closed_Mask
 						if (neighbor & North_Open_Mask) // neighbor has south opening
 							grid[i][j] &= South_Open_Mask;
 						else
@@ -433,7 +391,7 @@ bool findBestSeedLocation(uint16_t **grid, uint32_t width, uint32_t length, floa
 					}
 				}
 
-				// Check South neighbor (y+1, which is i+1)
+				// check south neighbor (y+1, which is i+1)
 				if (i < length - 1)
 				{
 					uint16_t neighbor = grid[i + 1][j];
@@ -553,8 +511,11 @@ void update_spawnrates(float rates[], int current_collapsed, int target_collapse
 		}
 
 		float tile_pos = TILE_POSITIONS[i];
-		float distance_sq = pow(tile_pos - peak_position, 2);
-		float exponent = -distance_sq / (2 * pow(GAUSS_WIDTH, 2));
+		float diff = tile_pos - peak_position;
+		float distance_sq = diff * diff;
+		// GAUSS_WIDTH is a constant (2.0f) so just hardcode
+		static const float GAUSS_WIDTH_SQ_X2 = 2.0f * (2.0f * 2.0f); // 8.0f
+		float exponent = -distance_sq / GAUSS_WIDTH_SQ_X2;
 
 		raw_weights[i] = exp(exponent);
 	}

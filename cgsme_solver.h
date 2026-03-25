@@ -63,7 +63,7 @@ void collapseTile(uint16_t *tile, float *rates, uint32_t *rng);
 ///     - Does bounds checks before touching neighbors.
 ///     - Expects `gridLayer[y][x]` to be a valid tile value from the known set,
 ///       but tolerates other values by applying no restriction (full-mask).
-void updateNeighbours(uint16_t **gridLayer, uint32_t width, uint32_t length, uint32_t x, uint32_t y, MinHeap *heap, float **distMap, uint32_t *rng);
+void updateNeighbours(uint16_t **gridLayer, uint32_t width, uint32_t length, uint32_t x, uint32_t y, MinHeap *heap, uint32_t *rng);
 
 /// Recalculate tile spawn rates using a Gaussian model and connector boost.
 ///
@@ -106,21 +106,19 @@ bool isTileRequired(uint16_t **grid, uint32_t width, uint32_t length, uint32_t x
 /// @param grid Pointer to the grid layer.
 /// @param width Grid width.
 /// @param length Grid length.
-/// @param distMap Distance map.
 /// @param outX Output X coordinate.
 /// @param outY Output Y coordinate.
 /// @param rng Pointer to random state.
 /// @return true if a valid location was found, false otherwise.
-bool findBestSeedLocation(uint16_t **grid, uint32_t width, uint32_t length, float **distMap, uint32_t *outX, uint32_t *outY, uint32_t *rng);
+bool findBestSeedLocation(uint16_t **grid, uint32_t width, uint32_t length, uint32_t *outX, uint32_t *outY, uint32_t *rng);
 
 /// @brief Calculate the score for a tile based on entropy, distance, and noise.
 /// @param grid Pointer to the grid layer.
 /// @param x X coordinate.
 /// @param y Y coordinate.
-/// @param distMap Distance map.
 /// @param rng Pointer to random state.
 /// @return Calculated score.
-float calculateScore(uint16_t **grid, uint32_t x, uint32_t y, float **distMap, uint32_t *rng);
+float calculateScore(uint16_t **grid, uint32_t x, uint32_t y, uint32_t *rng);
 
 // 0: X, 1: T, 2: L, 3: I, 4: D
 static const int BIT_TO_CATEGORY[16] = {
@@ -134,5 +132,6 @@ static const int BIT_TO_CATEGORY[16] = {
 // position of each tile type on the probability curve:
 //  0 (X), 1 (T), 2 (L), 3 (I), 4 (D)
 static const float TILE_POSITIONS[NUM_TILE_TYPES] = {0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 0.0f}; // special X (wont be spawned by natural wfc)
+
 
 #endif // cgsme_SOLVER_H

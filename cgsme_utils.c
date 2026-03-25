@@ -119,7 +119,7 @@ void bubbleDown(MinHeap *h, uint32_t index)
 }
 
 // Adds a node or Updates it if it already exists
-void heapInsertOrUpdate(MinHeap *h, uint16_t **grid, uint32_t x, uint32_t y, float **distMap, uint32_t *rng)
+void heapInsertOrUpdate(MinHeap *h, uint16_t **grid, uint32_t x, uint32_t y, uint32_t *rng)
 {
 	CGSME_PROFILE_FUNC();
 	uint32_t mapIdx = y * h->width + x;
@@ -138,7 +138,7 @@ void heapInsertOrUpdate(MinHeap *h, uint16_t **grid, uint32_t x, uint32_t y, flo
 	}
 
 	// Calculate fresh score
-	float score = calculateScore(grid, x, y, distMap, rng);
+	float score = calculateScore(grid, x, y, rng);
 
 	if (currentHeapIdx != -1)
 	{

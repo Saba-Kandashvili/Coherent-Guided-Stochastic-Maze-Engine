@@ -89,9 +89,8 @@ void bubbleDown(MinHeap *h, uint32_t index);
 /// @param grid Pointer to the grid layer.
 /// @param x X coordinate.
 /// @param y Y coordinate.
-/// @param distMap Distance map for score calculation.
 /// @param rng Pointer to random state.
-void heapInsertOrUpdate(MinHeap *h, uint16_t **grid, uint32_t x, uint32_t y, float **distMap, uint32_t *rng);
+void heapInsertOrUpdate(MinHeap *h, uint16_t **grid, uint32_t x, uint32_t y, uint32_t *rng);
 
 /// @brief Pop the minimum node from the heap.
 /// @param h Pointer to the heap.

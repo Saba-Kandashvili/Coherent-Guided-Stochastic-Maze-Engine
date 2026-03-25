@@ -8,22 +8,66 @@
 
 int main(int argc, char **argv)
 {
+
+ // 2. Configuration
+    uint32_t width = 100;
+    uint32_t length = 100;
+    uint32_t height = 3;
+    // uint32_t seed = time(NULL);
+    uint32_t seed = 5;
+    uint32_t fulness = 70;
+
     // 1. Setup Debugging
     setbuf(stdout, NULL);
     bool cgsme_debug_enabled = false;
     bool cgsme_quick = false;
+    bool cgsme_avg_mode = false;
     for (int i = 1; i < argc; ++i)
     {
         if (argv[i] && (strcmp(argv[i], "--cgsme-debug") == 0 || strcmp(argv[i], "-d") == 0))
             cgsme_debug_enabled = true;
         if (argv[i] && strcmp(argv[i], "--cgsme-debug-quick") == 0)
             cgsme_quick = true;
+        if (argv[i] && strcmp(argv[i], "--cgsme-debug-quick-avg") == 0)
+            cgsme_avg_mode = true;  
     }
+    
+    if (cgsme_avg_mode) cgsme_quick = true;
 
     if (cgsme_quick)
+{
+    int num_runs = cgsme_avg_mode ? 50 : 1;
+    uint64_t total_us = 0;
+    uint16_t ***grid = NULL;
+
+    printf("Benchmarking %d run(s)...\n", num_runs);
+
+    for (int r = 0; r < num_runs; r++)
     {
-        cgsme_set_quick_mode(true);
+        uint64_t start_us = cgsme_now_us();
+        grid = generateGrid(width, length, height, seed, fulness);
+        uint64_t end_us = cgsme_now_us();
+
+        if (grid) {
+            total_us += (end_us - start_us);
+            // We only need to free; we'll verify stats on the last run or once
+            freeGrid(grid, width, length, height);
+        } else {
+            printf("Run %d FAILED\n", r);
+            return 1;
+        }
     }
+
+    uint64_t avg_us = total_us / num_runs;
+    double avg_seconds = (double)avg_us / 1000000.0;
+
+    printf("\n--- BENCHMARK RESULTS ---\n");
+    printf("Runs:    %d\n", num_runs);
+    printf("Total:   %llu us\n", (unsigned long long)total_us);
+    printf("Average: %llu us (%.6f s)\n", (unsigned long long)avg_us, avg_seconds);
+    
+    return 0;
+}
     else
     {
         cgsme_init_debug();
@@ -59,13 +103,7 @@ int main(int argc, char **argv)
         }
     }
 
-    // 2. Configuration
-    uint32_t width = 100;
-    uint32_t length = 100;
-    uint32_t height = 3;
-    // uint32_t seed = time(NULL);
-    uint32_t seed = 5;
-    uint32_t fulness = 70;
+   
 
     printf("Generating %dx%dx%d Maze (Seed: %u, Fullness: %u%%)...\n", width, length, height, seed, fulness);
 

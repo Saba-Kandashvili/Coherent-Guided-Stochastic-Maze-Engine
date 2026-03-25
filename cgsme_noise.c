@@ -204,10 +204,10 @@ done:
 // RIDGED NOISE MASK GENERATION
 void generateRidgedMask(uint16_t ***grid, uint32_t width, uint32_t length, uint32_t height, uint32_t targetFullness, uint32_t seed)
 {
-    CGSME_PROFILE_FUNC();
+    CGSME_PROFILE_FUNC();/*
     printf("Generating Ridged Noise Mask (Fullness: %u%%)...\n", targetFullness);
     printf("  - Target filled pixels: ~%u\n", (uint32_t)((uint64_t)width * (uint64_t)length * (uint64_t)targetFullness / 100));
-    printf("  - Grid Size: %ux%u\n", width, length);
+    printf("  - Grid Size: %ux%u\n", width, length);*/
 
     uint32_t totalPixels = width * length;
     uint32_t targetCount = (uint32_t)((uint64_t)totalPixels * (uint64_t)targetFullness / 100);
