@@ -10,7 +10,11 @@
 #include "generator.h"
 #include "cgsme_debug.h"
 #include "tiles.h"
+#ifdef __linux__
+#include <threads.h>
+#else
 #include "tinycthread/tinycthread.h"
+#endif
 #include "cgsme_utils.h"
 #include "cgsme_noise.h"
 #include "cgsme_topology.h"
