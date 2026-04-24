@@ -10,9 +10,13 @@ file(GLOB CGSME_SOURCES
     "cgsme_noise.c"
     "cgsme_topology.c"
     "cgsme_solver.c"
-    "tinycthread/tinycthread.c" 
 )
 
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    list(APPEND CGSME_SOURCES
+        "tinycthread/tinycthread.c"
+    )
+endif()
 
 # 2. CREATE the library target from the source files.
 # This is the most important step. The target "CGSME" now exists.
