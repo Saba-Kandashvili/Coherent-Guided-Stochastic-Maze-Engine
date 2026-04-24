@@ -6,8 +6,7 @@ echo 1. Compiling C Code...
 echo ---------------------------------------------------
 
 REM Build with cgsme_DEBUG and include the debug source so instrumentation is available
-gcc -std=c11 -O3 -g -Dcgsme_DEBUG main.c generator.c cgsme_debug.c cgsme_utils.c cgsme_noise.c cgsme_topology.c cgsme_solver.c tinycthread/tinycthread.c -o debug_gen.exe -I.
-
+gcc -std=c11 -O3 -g -Dcgsme_DEBUG --D_GNU_SOURCE main.c generator.c cgsme_debug.c cgsme_utils.c cgsme_noise.c cgsme_topology.c cgsme_solver.c tinycthread/tinycthread.c -o debug_gen.exe -I. -pthread -lm
 if %ERRORLEVEL% NEQ 0 (
     echo Compilation Failed!
     pause

@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <time.h>
 
 // Public API for optional timing + debug logging for the cgsme generator.
 // This file intentionally provides no-op inline implementations when
